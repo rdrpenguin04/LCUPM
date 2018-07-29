@@ -1,29 +1,38 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
+#include <cstdlib>
+#include <cstdio>
+#include <cstring>
+#include <string>
 
-#include <curl/curl.h>
+#include <Text.hpp>
+#include <Errors.hpp>
+#include <Curl.hpp>
+#include <IOWrapper.hpp>
 
-#define NORMAL "\e[0m"
-#define GREEN "\e[1;38;2;0;255;0m"
-#define RED "\e[1;38;2;255;0;0m"
+using namespace std::string_literals;
+
 
 void quit() {
-	exit(0);
+	throw exit_program();
 }
 
-void help(char* name) {
+void help(Terminal& t,char* name) {
+	/*
 	printf(NORMAL);
 	printf("Usage:\n");
 	printf("\t%s fetch <packagename>\n", name);
 	printf("\t%s help\n", name);
+	*/
+	t.print(Color::Reset)
+	.print("Usage"s,endline)
+	.print(tab,name,"fetch <packagename>",endline)
+	.print(tab,name," help"s,endline);
 }
 
-void helpFetch(char* name) {
-	printf(NORMAL);
-	printf("Usage (fetch):\n");
-	printf("\t%s fetch <packagename>\n", name);
+
+void helpFetch(Terminal& t,char* name) {
+	t.print(Color::Reset)
+	.print("Usage (fetch)"s,endline)
+	.print(tab,name,"fetch <packagename>",endline);
 }
 
 size_t writeFile(void* ptr, size_t size, size_t nmemb, FILE *stream) {
@@ -32,7 +41,7 @@ size_t writeFile(void* ptr, size_t size, size_t nmemb, FILE *stream) {
 }
 
 void startDownload(char* url, char* resultName) {
-	CURL *curl;
+	/*CURL *curl;
 	FILE *fp;
 	CURLcode res;
 	curl = curl_easy_init();
@@ -44,37 +53,59 @@ void startDownload(char* url, char* resultName) {
 		res = curl_easy_perform(curl);
 		curl_easy_cleanup(curl);
 		fclose(fp);
-	}
+	}*/
+	FileOutputStream strm(resultName);
+	Curl target(strm);
+	target.setURL(url);
+	target.fetch();
 }
 
+
 int main(int argc, char** argv) {
-	printf(GREEN);
-	printf("Lightning Creations Unified Package Manager\n");
-	printf(NORMAL);
-	printf("by InfernoDeity and Rdrpenguin\n");
-	printf("Version 1.0\n");
-
-	curl_global_init(CURL_GLOBAL_ALL);
-
-	if(argc == 1) {
-		printf(RED);
-		printf("ERROR! Not enough arguments!\n");
-		help(argv[0]);
-		quit();
-	}
-
-	if(strcmp("fetch", argv[1]) == 0) {
-		if(argc == 2) {
+	Terminal t;
+	Version current(1,0);
+	CurlGlobal instance;
+	try{
+		/*
+		printf(GREEN);
+		printf("Lightning Creations Unified Package Manager\n");
+		printf(NORMAL);
+		printf("by InfernoDeity and Rdrpenguin\n");
+		printf("Version 1.0\n");
+		*/
+		t.print(foreground<Color::GREEN>)
+		.print("Lighting Creations Unified Package Manager",endline)
+		.print(Color::Reset)
+		.print("by InfernoDeity and Rdrpenguin",endline)
+		.print("Version ",current,endline);
+		
+		
+		if(argc == 1) {
+			/*
 			printf(RED);
 			printf("ERROR! Not enough arguments!\n");
-			helpFetch(argv[0]);
-			quit();
+			*/
+			t.print(foreground<Color::RED>,"ERROR! Not enough arguments!"s,endline);
+			help(t,argv[0]);
+			t.print("Press any key to exit>"s,endline).wait();
+			return 0;
 		}
-		printf("Fetching %s...\n", argv[2]);
-		startDownload(argv[2], (char*)"./download");
-	} else if(strcmp("help", argv[1]) == 0) {
-		help(argv[0]);
+		
+		if(strcmp("fetch", argv[1]) == 0) {
+			if(argc == 2) {
+				t.print(foreground<Color::RED>,"ERROR! Not enough arguments!"s,endline);
+				helpFetch(t,argv[0]);
+				t.print("Press any key to exit>"s,endline).wait();
+				return 0;
+			}
+			printf("Fetching %s...\n", argv[2]);
+			startDownload(argv[2], (char*)"./download");
+		} else if(strcmp("help", argv[1]) == 0) {
+			help(t,argv[0]);
+		}
+	}catch(exit_program e){
+		return e.getCode();
 	}
-
-	quit();
+	
+	return 0;
 }
